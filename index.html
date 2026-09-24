@@ -62,10 +62,53 @@
     input[type="range"] { width: 100%; accent-color: var(--beak); }
     .readout { color: var(--brass); min-width: 3.2em; text-align: right; }
     .keys { margin: 8px 0 0; color: rgba(231, 244, 242, 0.62); font-size: 12px; }
+    .glass { position: fixed; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
+    canvas { cursor: crosshair; }
+    .toss, .stain { position: absolute; width: 84px; height: 84px; margin: -42px 0 0 -42px; pointer-events: none; }
+    .toss svg, .stain svg { display: block; width: 100%; height: 100%; overflow: visible; }
+    .stain { width: 128px; height: 128px; margin: -64px 0 0 -64px; filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.28)); }
+    .splat { position: absolute; width: 8px; height: 8px; border-radius: 50%; margin: -4px 0 0 -4px; }
+    .heckle {
+      position: fixed; z-index: 3; right: 22px; top: 50%; transform: translateY(-50%);
+      width: 148px; pointer-events: auto;
+      background: #3a2a1c; color: #f3e2c4;
+      border: 1px solid rgba(226, 177, 90, 0.45);
+      border-radius: 16px; padding: 12px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+    }
+    .heckle h2 {
+      margin: 0 0 4px; font-family: Fraunces, "Songti SC", serif;
+      font-size: 22px; font-weight: 560; letter-spacing: -0.03em;
+    }
+    .heckle .hint { margin: 0 0 10px; font-size: 12px; color: rgba(243, 226, 196, 0.72); }
+    .ammo { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .ammo button {
+      display: grid; justify-items: center; gap: 2px;
+      border-radius: 12px; padding: 6px 4px 7px; color: #f3e2c4;
+      background: rgba(243, 226, 196, 0.06);
+    }
+    .ammo button[aria-pressed="true"] { background: #c23b2e; color: #fff8ee; border-color: transparent; }
+    .ammo svg { width: 28px; height: 28px; }
+    .ammo span { font-size: 11px; }
+    .score { display: flex; justify-content: space-between; align-items: baseline; margin: 10px 0 4px; }
+    .score b { font-family: Fraunces, serif; font-size: 28px; font-weight: 560; color: var(--brass); }
+    .verdict { margin: 0; min-height: 2.6em; font-size: 12px; color: rgba(243, 226, 196, 0.8); }
+    .wipe {
+      width: 100%; margin-top: 8px; border-radius: 999px;
+    }
     @media (max-width: 720px) {
       .hud { padding: 14px; }
       .brand p, .keys { display: none; }
       h1 { font-size: 34px; }
+      .heckle {
+        top: 96px; bottom: auto; left: 14px; right: 14px; width: auto;
+        transform: none; display: grid; grid-template-columns: 1fr auto; gap: 8px 12px;
+      }
+      .heckle h2, .heckle .hint { grid-column: 1; }
+      .heckle .hint { margin-bottom: 0; }
+      .score, .verdict, .wipe { grid-column: 2; grid-row: 1 / span 2; }
+      .verdict, .wipe { display: none; }
+      .ammo { grid-column: 1 / -1; grid-template-columns: repeat(4, 1fr); }
     }
     @media (prefers-reduced-motion: reduce) {
       .panel { backdrop-filter: none; }
@@ -78,7 +121,7 @@
     <div class="brand">
       <p class="eyebrow">Tide loop · 0.8 km</p>
       <h1>栈道上的鹈鹕</h1>
-      <p>它自己会骑。你管速度、铃声，以及从哪个角度看。</p>
+      <p>它自己会骑。观众要是觉得这项目很屎，就往屏幕上砸。</p>
     </div>
     <section class="panel" aria-label="骑行控制">
       <div class="row" role="group" aria-label="机位">
@@ -95,9 +138,23 @@
         <button type="button" id="mute" aria-pressed="false">声音开</button>
       </div>
       <p class="keys" id="stats">已骑 0 米 · 第 1 圈</p>
-      <p class="keys">W / S 变速，C 换机位，空格按铃，M 静音。环视时机位可拖动。</p>
+      <p class="keys">W / S 变速，C 换机位，空格按铃，M 静音。1–4 换砸的东西，点画面扔出去。</p>
     </section>
   </div>
+  <div id="glass" class="glass" aria-hidden="true"></div>
+  <aside class="heckle" aria-label="观众席">
+    <h2>观众席</h2>
+    <p class="hint">选一件，点画面砸到屏幕上。</p>
+    <div class="ammo" role="group" aria-label="砸什么">
+      <button type="button" data-throw="poop" aria-pressed="true"><svg viewBox="0 0 32 32" aria-hidden="true"><path fill="#6a3b16" d="M16 4c2 3 1 5 3 6 3 1 5 4 4 7-1 4 1 6 0 8-2 3-8 5-12 3-4-2-6-6-4-10 1-2-1-5 1-7 2-2 3-5 8-7z"/><ellipse cx="13" cy="14" rx="2" ry="1.2" fill="#c48a45"/></svg><span>狗屎</span></button>
+      <button type="button" data-throw="tomato" aria-pressed="false"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="18" r="9" fill="#c23b2e"/><path d="M16 8c2 3 6 3 7 1-3 1-5 0-7-1z" fill="#3d7a32"/><ellipse cx="13" cy="15" rx="2" ry="1" fill="#f0a090" opacity=".8"/></svg><span>番茄</span></button>
+      <button type="button" data-throw="egg" aria-pressed="false"><svg viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="16" cy="18" rx="8" ry="10" fill="#f4efe4"/><path d="M12 16c2 1 3-2 5-1" stroke="#8a8478" fill="none"/><path d="M20 8c2 2 1 4-1 3" stroke="#7a8a3a" fill="none"/></svg><span>臭蛋</span></button>
+      <button type="button" data-throw="slipper" aria-pressed="false"><svg viewBox="0 0 32 32" aria-hidden="true"><path fill="#e36a2c" d="M6 18c0-6 8-8 14-6 4 1 7 4 7 7 0 3-8 5-15 5S6 22 6 18z"/><path d="M10 16h8" stroke="#1a100c" stroke-width="2"/></svg><span>拖鞋</span></button>
+    </div>
+    <p class="score"><span>已砸</span><b id="heckle-count">0</b></p>
+    <p class="verdict" id="heckle-verdict">屏幕还干净。</p>
+    <button type="button" class="wipe" id="wipe">擦掉</button>
+  </aside>
   <script type="importmap">
   {
     "imports": {
@@ -461,7 +518,11 @@
       cam: "chase",
       muted: false,
       distance: 0,
-      reduced: matchMedia("(prefers-reduced-motion: reduce)").matches
+      reduced: matchMedia("(prefers-reduced-motion: reduce)").matches,
+      kind: "poop",
+      thrown: 0,
+      flinch: 0,
+      flinchSide: 1
     };
     if (state.reduced) state.speed = 0.12;
 
@@ -528,6 +589,143 @@
     });
     addEventListener("pointerdown", unlock, { once: true });
 
+    const glass = document.querySelector("#glass");
+    const countEl = document.querySelector("#heckle-count");
+    const verdictEl = document.querySelector("#heckle-verdict");
+    const throwButtons = [...document.querySelectorAll("[data-throw]")];
+    const marks = {
+      poop: `<svg viewBox="0 0 64 64"><path fill="#5c3414" d="M32 6c6 8 2 12 8 16 8 4 12 12 8 20-4 10-18 16-28 12-12-4-16-18-8-28 4-6-2-12 4-16 6-4 8-10 16-4z"/><ellipse cx="26" cy="28" rx="5" ry="3" fill="#c48a45"/></svg>`,
+      tomato: `<svg viewBox="0 0 64 64"><circle cx="32" cy="36" r="18" fill="#c23b2e"/><path d="M32 14c4 8 14 8 16 2-8 2-12 0-16-2z" fill="#3d7a32"/></svg>`,
+      egg: `<svg viewBox="0 0 64 64"><ellipse cx="32" cy="36" rx="16" ry="20" fill="#f4efe4"/><path d="M22 30c6 2 8-6 14-2" stroke="#8a8478" fill="none" stroke-width="2"/></svg>`,
+      slipper: `<svg viewBox="0 0 64 64"><path fill="#e36a2c" d="M8 36c0-12 16-16 30-12 10 3 16 10 16 16 0 8-18 12-32 12S8 46 8 36z"/><path d="M18 32h18" stroke="#1a100c" stroke-width="3"/></svg>`
+    };
+    const stains = {
+      poop: `<svg viewBox="0 0 80 80"><path fill="#4a2c10" d="M18 48c2-16 14-22 22-28 8 4 20 8 24 22 4 16-8 28-24 28S16 64 18 48z"/><ellipse cx="30" cy="46" rx="6" ry="3" fill="#8a5a28" opacity=".7"/></svg>`,
+      tomato: `<svg viewBox="0 0 80 80"><path fill="#9a241c" d="M40 16c10 6 22 4 26 16 6 14-2 30-16 34-16 6-32-4-34-18C14 32 26 18 40 16z"/><circle cx="22" cy="28" r="5" fill="#c23b2e"/><circle cx="58" cy="36" r="4" fill="#c23b2e"/></svg>`,
+      egg: `<svg viewBox="0 0 80 80"><ellipse cx="40" cy="44" rx="16" ry="12" fill="#e2b15a"/><path d="M16 30l12 8M62 26l-10 12M22 62l8-10" stroke="#f4efe4" stroke-width="4"/></svg>`,
+      slipper: marks.slipper
+    };
+    function setKind(kind) {
+      state.kind = kind;
+      throwButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.throw === kind)));
+    }
+    throwButtons.forEach((b) => b.addEventListener("click", () => {
+      setKind(b.dataset.throw);
+      const rect = canvas.getBoundingClientRect();
+      throwAt(rect.left + rect.width * 0.55, rect.top + rect.height * 0.42);
+    }));
+    function verdict(hit) {
+      if (hit) return "砸中了。它叫了一声。";
+      if (state.thrown < 5) return "有人开始嫌了。";
+      if (state.thrown < 12) return "这项目看起来挺屎。";
+      if (state.thrown < 24) return "全场都在砸。";
+      return "玻璃已经看不清鹈鹕了。";
+    }
+    function splatSound(kind) {
+      if (state.muted) return;
+      unlock();
+      if (!actx) return;
+      const buffer = actx.createBuffer(1, Math.floor(actx.sampleRate * 0.14), actx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+      const src = actx.createBufferSource();
+      src.buffer = buffer;
+      const filter = actx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = kind === "slipper" ? 240 : kind === "egg" ? 1600 : 640;
+      const g = actx.createGain();
+      g.gain.setValueAtTime(0.18, actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + 0.15);
+      src.connect(filter).connect(g).connect(actx.destination);
+      src.start();
+      if (kind === "poop") tone(90, 0.12, "sine", 0.05);
+      if (kind === "tomato") tone(210, 0.08, "triangle", 0.04);
+      if (kind === "egg") tone(1280, 0.05, "square", 0.015);
+      if (kind === "slipper") tone(64, 0.1, "sine", 0.06);
+    }
+    const raycaster = new THREE.Raycaster();
+    const ndc = new THREE.Vector2();
+    function placeStain(x, y, kind) {
+      const stain = document.createElement("div");
+      stain.className = "stain";
+      stain.style.left = x + "px";
+      stain.style.top = y + "px";
+      stain.style.transform = `rotate(${Math.round(Math.random() * 80 - 40)}deg)`;
+      stain.innerHTML = stains[kind];
+      glass.appendChild(stain);
+      const color = kind === "tomato" ? "#c23b2e" : kind === "egg" ? "#e2b15a" : kind === "slipper" ? "#e36a2c" : "#5c3414";
+      for (let i = 0; i < 6; i++) {
+        const bit = document.createElement("div");
+        bit.className = "splat";
+        bit.style.background = color;
+        bit.style.left = x + "px";
+        bit.style.top = y + "px";
+        glass.appendChild(bit);
+        const ang = Math.random() * Math.PI * 2;
+        const dist = 24 + Math.random() * 46;
+        bit.animate([
+          { transform: "translate(0,0) scale(1)", opacity: 1 },
+          { transform: `translate(${Math.cos(ang) * dist}px, ${Math.sin(ang) * dist}px) scale(0.3)`, opacity: 0 }
+        ], { duration: state.reduced ? 0 : 420, easing: "ease-out", fill: "forwards" }).onfinish = () => bit.remove();
+      }
+      while (glass.querySelectorAll(".stain").length > 36) glass.querySelector(".stain").remove();
+    }
+    function throwAt(x, y) {
+      const btn = document.querySelector(`[data-throw="${state.kind}"]`);
+      const from = btn.getBoundingClientRect();
+      const sx = from.left + from.width / 2;
+      const sy = from.top + from.height / 2;
+      const kind = state.kind;
+      const toss = document.createElement("div");
+      toss.className = "toss";
+      toss.innerHTML = marks[kind];
+      glass.appendChild(toss);
+      const dx = x - sx;
+      const dy = y - sy;
+      const arc = Math.min(160, Math.hypot(dx, dy) * 0.25);
+      const midX = (sx + x) / 2;
+      const midY = Math.min(sy, y) - arc;
+      const duration = state.reduced ? 0 : Math.min(680, 260 + Math.hypot(dx, dy) * 0.32);
+      const land = () => {
+        toss.remove();
+        const rect = canvas.getBoundingClientRect();
+        ndc.x = ((x - rect.left) / rect.width) * 2 - 1;
+        ndc.y = -((y - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(ndc, camera);
+        const hit = raycaster.intersectObject(pelican, true).length > 0;
+        placeStain(x, y, kind);
+        splatSound(kind);
+        state.thrown += 1;
+        countEl.textContent = String(state.thrown);
+        verdictEl.textContent = verdict(hit);
+        if (hit) {
+          state.flinch = 1;
+          state.flinchSide = x < rect.left + rect.width / 2 ? -1 : 1;
+          squawk();
+        }
+      };
+      if (duration === 0) {
+        land();
+        return;
+      }
+      toss.animate([
+        { transform: `translate(${sx}px, ${sy}px) rotate(0deg) scale(0.65)` },
+        { transform: `translate(${midX}px, ${midY}px) rotate(160deg) scale(1.05)`, offset: 0.55 },
+        { transform: `translate(${x}px, ${y}px) rotate(380deg) scale(1)` }
+      ], { duration, easing: "cubic-bezier(.2,.65,.3,1)", fill: "forwards" }).onfinish = land;
+    }
+    addEventListener("pointerdown", (e) => {
+      if (e.button !== 0) return;
+      if (e.target.closest(".panel, .heckle, button, input, label")) return;
+      throwAt(e.clientX, e.clientY);
+    });
+    document.querySelector("#wipe").addEventListener("click", () => {
+      glass.replaceChildren();
+      state.thrown = 0;
+      countEl.textContent = "0";
+      verdictEl.textContent = "屏幕还干净。";
+    });
+
     function dayName(v) {
       if (v < 0.25) return "黎明";
       if (v < 0.55) return "上午";
@@ -565,6 +763,9 @@
       }
       if (e.key === " ") { e.preventDefault(); bellRing(); }
       if (e.key === "m") muteBtn.click();
+      const kinds = ["poop", "tomato", "egg", "slipper"];
+      const picked = kinds["1234".indexOf(e.key)];
+      if (picked) setKind(picked);
       speedInput.value = String(Math.round(state.speed * 100));
       speedOut.textContent = speedInput.value;
     });
@@ -620,8 +821,10 @@
       const flap = state.reduced ? 0.04 : 0.1 + state.speed * 0.08;
       wingL.rotation.z = -0.5 + Math.sin(t * (2 + state.speed * 4)) * flap - bank;
       wingR.rotation.z = 0.5 - Math.sin(t * (2 + state.speed * 4)) * flap - bank;
-      head.rotation.x = Math.sin(t * 2.2) * 0.06;
+      state.flinch = Math.max(0, state.flinch - dt * 2.4);
+      head.rotation.x = Math.sin(t * 2.2) * 0.06 + state.flinch * 0.5;
       head.rotation.y = Math.sin(t * 0.7) * 0.08;
+      pelican.rotation.z = state.flinch * 0.25 * state.flinchSide;
       pouch.scale.y = 0.7 + Math.sin(t * 1.6) * 0.05;
       pelican.position.y = 0.55 + Math.sin(t * 6) * 0.015 * (0.3 + state.speed);
 
